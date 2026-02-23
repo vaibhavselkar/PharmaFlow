@@ -35,8 +35,22 @@ export default function AuthCallbackPage() {
           return
         }
 
-        if (session) {
-          // Session established successfully
+        if (session?.user) {
+          // Get user info from Supabase session
+          const email = session.user.email || ""
+          const name = session.user.user_metadata?.full_name || ""
+
+          // Call our API to set the pharmaflow_token cookie
+          try {
+            await fetch("/api/auth/google", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, name }),
+            })
+          } catch (e) {
+            console.error("Failed to set auth cookie:", e)
+          }
+
           router.push("/admin/dashboard")
         } else {
           // No session - check if we have tokens in the hash

@@ -23,11 +23,11 @@ export async function signInWithGoogle() {
   return await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      // ✅ FIXED: was /admin/auth/callback (wrong path), now /auth/callback (correct)
-      redirectTo: `${location.origin}/auth/callback`,
+      redirectTo: `${location.origin}/admin/auth/callback`,
     },
   })
 }
+
 
 export async function signOut() {
   return await supabase.auth.signOut()
