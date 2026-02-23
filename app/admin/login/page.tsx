@@ -1,15 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ShieldCheck } from "lucide-react"
+import { ShieldCheck, Loader2 } from "lucide-react"
 import { FaGoogle } from "react-icons/fa"
-import { signInWithEmail, signUpWithEmail, signInWithGoogle } from "@/lib/supabase"
+import { signInWithEmail, signUpWithEmail, signInWithGoogle, supabase } from "@/lib/supabase"
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -18,6 +18,20 @@ export default function AdminLoginPage() {
   const [name, setName] = useState("")
   const [loading, setLoading] = useState(false)
   const [isRegistering, setIsRegistering] = useState(false)
+  const [initializing, setInitializing] = useState(true)
+
+  // Check if already logged in
+  useEffect(() => {
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        router.push("/admin/dashboard")
+        return
+      }
+      setInitializing(false)
+    }
+    checkSession()
+  }, [router])
 
   async function handleEmailLogin() {
     if (!email || !password) {
@@ -32,17 +46,28 @@ export default function AdminLoginPage() {
 
       if (error) {
         toast.error(error.message)
+        setLoading(false)
         return
       }
 
-      if (isRegistering) {
-        toast.success("Registration successful! Please check your email to verify.")
-      } else {
-        toast.success("Login successful!")
+      // Wait a moment for session to be established
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Check if session exists
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session) {
+        if (isRegistering) {
+          toast.success("Registration successful! Please check your email to verify.")
+        } else {
+          toast.success("Login successful!")
+        }
         router.push("/admin/dashboard")
+      } else {
+        toast.error("Authentication failed. Please try again.")
       }
-    } catch {
-      toast.error("Something went wrong. Please try again.")
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -54,13 +79,21 @@ export default function AdminLoginPage() {
       const { error } = await signInWithGoogle()
       if (error) {
         toast.error(error.message)
+        setLoading(false)
       }
       // Redirect will happen automatically via OAuth
-    } catch {
-      toast.error("Something went wrong. Please try again.")
-    } finally {
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong. Please try again.")
       setLoading(false)
     }
+  }
+
+  if (initializing) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (

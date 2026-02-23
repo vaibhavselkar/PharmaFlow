@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { signOut, getCurrentUser, supabase } from "@/lib/supabase"
-import { Copy, Link as LinkIcon, Plus, Users, Store, Truck } from "lucide-react"
+import { signOut, supabase } from "@/lib/supabase"
+import { Copy, Link as LinkIcon, Plus, Users, Store, Truck, Loader2 } from "lucide-react"
 
 interface InviteLink {
   id: string
@@ -29,20 +29,28 @@ export default function AdminDashboardPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [newInviteRole, setNewInviteRole] = useState<"pharmacy" | "agent">("pharmacy")
 
+  // Set up auth state listener
   useEffect(() => {
-    async function checkUser() {
-      // Check Supabase session
-      const { data: { session } } = await supabase.auth.getSession()
-      
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         router.push("/admin/login")
-        return
+      } else {
+        setUser(session.user)
+        setLoading(false)
       }
-      
-      setUser(session.user)
-      setLoading(false)
-    }
-    checkUser()
+    })
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        router.push("/admin/login")
+      } else {
+        setUser(session.user)
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [router])
 
   function generateInviteToken(): string {
@@ -83,7 +91,7 @@ export default function AdminDashboardPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-muted-foreground">Loading...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
