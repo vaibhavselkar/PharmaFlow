@@ -9,33 +9,53 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ShieldCheck } from "lucide-react"
 import { FaGoogle } from "react-icons/fa"
+import { signInWithEmail, signUpWithEmail, signInWithGoogle } from "@/lib/supabase"
 
-export default function LoginPage() {
+export default function AdminLoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [name, setName] = useState("")
   const [loading, setLoading] = useState(false)
+  const [isRegistering, setIsRegistering] = useState(false)
 
-  async function handleLogin(loginEmail: string, loginPassword: string) {
+  async function handleEmailLogin() {
+    if (!email || !password) {
+      toast.error("Please enter email and password")
+      return
+    }
     setLoading(true)
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        toast.error(data.error || "Login failed")
+      const { data, error } = isRegistering
+        ? await signUpWithEmail(email, password)
+        : await signInWithEmail(email, password)
+
+      if (error) {
+        toast.error(error.message)
         return
       }
-      toast.success(`Welcome back, ${data.user.name}!`)
-      const roleRoutes: Record<string, string> = {
-        pharmacy_owner: "/dashboard/pharmacy",
-        distributor: "/dashboard/distributor",
-        agent: "/dashboard/agent",
+
+      if (isRegistering) {
+        toast.success("Registration successful! Please check your email to verify.")
+      } else {
+        toast.success("Login successful!")
+        router.push("/admin/dashboard")
       }
-      router.push(roleRoutes[data.user.role] || "/login")
+    } catch {
+      toast.error("Something went wrong. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleGoogleLogin() {
+    setLoading(true)
+    try {
+      const { error } = await signInWithGoogle()
+      if (error) {
+        toast.error(error.message)
+      }
+      // Redirect will happen automatically via OAuth
     } catch {
       toast.error("Something went wrong. Please try again.")
     } finally {
@@ -52,24 +72,43 @@ export default function LoginPage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
               <ShieldCheck className="h-7 w-7 text-primary-foreground" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">PharmaFlow</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">PharmaFlow Admin</h1>
           </div>
           <p className="max-w-sm text-center text-muted-foreground leading-relaxed lg:text-left">
-            Streamline your pharmacy ordering and distribution. Manage medicines, track orders, and monitor your supply chain - all in one place.
+            Admin panel for managing the PharmaFlow platform. Register or sign in to access the admin dashboard.
           </p>
         </div>
 
-        {/* Login form */}
+        {/* Login/Register form */}
         <Card className="w-full max-w-sm border-border shadow-lg">
           <CardHeader className="gap-1">
-            <CardTitle className="text-xl text-foreground">Sign in</CardTitle>
-            <CardDescription>Enter your credentials to access the dashboard</CardDescription>
+            <CardTitle className="text-xl text-foreground">
+              {isRegistering ? "Create Admin Account" : "Admin Sign In"}
+            </CardTitle>
+            <CardDescription>
+              {isRegistering 
+                ? "Enter your details to create an admin account" 
+                : "Enter your credentials to access the admin panel"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
+            {isRegistering && (
+              <div className="mb-4">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+            )}
             <form
               onSubmit={(e) => {
                 e.preventDefault()
-                handleLogin(email, password)
+                handleEmailLogin()
               }}
               className="flex flex-col gap-4"
             >
@@ -78,7 +117,7 @@ export default function LoginPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder="admin@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -98,7 +137,9 @@ export default function LoginPage() {
                 />
               </div>
               <Button type="submit" disabled={loading} className="w-full">
-                {loading ? "Signing in..." : "Sign in"}
+                {loading 
+                  ? (isRegistering ? "Creating account..." : "Signing in...") 
+                  : (isRegistering ? "Create Account" : "Sign in")}
               </Button>
             </form>
             <div className="relative my-4">
@@ -115,12 +156,29 @@ export default function LoginPage() {
               type="button"
               variant="outline"
               disabled={loading}
-              onClick={() => toast.info("Google login coming soon!")}
+              onClick={handleGoogleLogin}
               className="w-full"
             >
               <FaGoogle className="mr-2 h-4 w-4" />
               Google
             </Button>
+            <div className="mt-4 text-center text-sm">
+              <span className="text-muted-foreground">
+                {isRegistering ? "Already have an account? " : "Don't have an account? "}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegistering(!isRegistering)
+                  setEmail("")
+                  setPassword("")
+                  setName("")
+                }}
+                className="text-primary hover:underline"
+              >
+                {isRegistering ? "Sign in" : "Register"}
+              </button>
+            </div>
           </CardContent>
         </Card>
       </div>
