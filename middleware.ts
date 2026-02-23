@@ -4,6 +4,7 @@ import { decodeToken } from "@/lib/token"
 
 const publicPaths = [
   "/login", 
+  "/register",
   "/api/auth/login",
   "/admin/login",
   "/admin/auth/callback",
