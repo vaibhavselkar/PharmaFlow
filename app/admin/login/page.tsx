@@ -8,30 +8,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ShieldCheck, Loader2 } from "lucide-react"
-import { FaGoogle } from "react-icons/fa"
-import { signInWithEmail, signUpWithEmail, signInWithGoogle, supabase } from "@/lib/supabase"
+import { decodeToken } from "@/lib/token"
+import type { AuthPayload } from "@/lib/types"
 
 export default function AdminLoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [name, setName] = useState("")
   const [loading, setLoading] = useState(false)
-  const [isRegistering, setIsRegistering] = useState(false)
   const [initializing, setInitializing] = useState(true)
 
   // Check if already logged in
   useEffect(() => {
-    async function checkSession() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        router.push("/admin/dashboard")
-        return
+    function checkSession() {
+      const cookie = document.cookie
+      const match = cookie.match(/pharmaflow_token=([^;]+)/)
+      if (match) {
+        const auth = decodeToken(match[1]) as AuthPayload | null
+        if (auth) {
+          router.push("/admin/dashboard")
+          return
+        }
       }
       setInitializing(false)
     }
     checkSession()
   }, [router])
+
 
   async function handleEmailLogin() {
     if (!email || !password) {
@@ -40,50 +43,25 @@ export default function AdminLoginPage() {
     }
     setLoading(true)
     try {
-      const { data, error } = isRegistering
-        ? await signUpWithEmail(email, password)
-        : await signInWithEmail(email, password)
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
 
-      if (error) {
-        toast.error(error.message)
+      const data = await response.json()
+
+      if (!response.ok) {
+        toast.error(data.error || "Invalid email or password")
         setLoading(false)
         return
       }
 
-      // Wait a moment for session to be established
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      // Check if session exists
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (session) {
-        if (isRegistering) {
-          toast.success("Registration successful! Please check your email to verify.")
-        } else {
-          toast.success("Login successful!")
-        }
-        router.push("/admin/dashboard")
-      } else {
-        toast.error("Authentication failed. Please try again.")
-      }
+      toast.success("Login successful!")
+      router.push("/admin/dashboard")
     } catch (err: any) {
       toast.error(err.message || "Something went wrong. Please try again.")
     } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleGoogleLogin() {
-    setLoading(true)
-    try {
-      const { error } = await signInWithGoogle()
-      if (error) {
-        toast.error(error.message)
-        setLoading(false)
-      }
-      // Redirect will happen automatically via OAuth
-    } catch (err: any) {
-      toast.error(err.message || "Something went wrong. Please try again.")
       setLoading(false)
     }
   }
@@ -108,36 +86,19 @@ export default function AdminLoginPage() {
             <h1 className="text-3xl font-bold tracking-tight text-foreground">PharmaFlow Admin</h1>
           </div>
           <p className="max-w-sm text-center text-muted-foreground leading-relaxed lg:text-left">
-            Admin panel for managing the PharmaFlow platform. Register or sign in to access the admin dashboard.
+            Admin panel for managing the PharmaFlow platform. Sign in to access the admin dashboard.
           </p>
         </div>
 
-        {/* Login/Register form */}
+        {/* Login form */}
         <Card className="w-full max-w-sm border-border shadow-lg">
           <CardHeader className="gap-1">
-            <CardTitle className="text-xl text-foreground">
-              {isRegistering ? "Create Admin Account" : "Admin Sign In"}
-            </CardTitle>
+            <CardTitle className="text-xl text-foreground">Admin Sign In</CardTitle>
             <CardDescription>
-              {isRegistering 
-                ? "Enter your details to create an admin account" 
-                : "Enter your credentials to access the admin panel"}
+              Enter your credentials to access the admin panel
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {isRegistering && (
-              <div className="mb-4">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Enter your full name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-            )}
             <form
               onSubmit={(e) => {
                 e.preventDefault()
@@ -170,48 +131,9 @@ export default function AdminLoginPage() {
                 />
               </div>
               <Button type="submit" disabled={loading} className="w-full">
-                {loading 
-                  ? (isRegistering ? "Creating account..." : "Signing in...") 
-                  : (isRegistering ? "Create Account" : "Sign in")}
+                {loading ? "Signing in..." : "Sign in"}
               </Button>
             </form>
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={loading}
-              onClick={handleGoogleLogin}
-              className="w-full"
-            >
-              <FaGoogle className="mr-2 h-4 w-4" />
-              Google
-            </Button>
-            <div className="mt-4 text-center text-sm">
-              <span className="text-muted-foreground">
-                {isRegistering ? "Already have an account? " : "Don't have an account? "}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsRegistering(!isRegistering)
-                  setEmail("")
-                  setPassword("")
-                  setName("")
-                }}
-                className="text-primary hover:underline"
-              >
-                {isRegistering ? "Sign in" : "Register"}
-              </button>
-            </div>
           </CardContent>
         </Card>
       </div>
