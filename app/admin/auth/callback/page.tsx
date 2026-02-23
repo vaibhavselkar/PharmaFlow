@@ -5,15 +5,27 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { Loader2 } from "lucide-react"
 
-// This page handles the case where Supabase sends back a #hash fragment
-// (Implicit flow) instead of ?code= (PKCE flow)
 export default function AuthCallbackPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // getSession() will automatically parse the #access_token hash from the URL
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        // Get user info from Supabase session
+        const email = session.user.email || ""
+        const name = session.user.user_metadata?.full_name || ""
+
+        // Call our API to set the pharmaflow_token cookie
+        try {
+          await fetch("/api/auth/google", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, name }),
+          })
+        } catch (e) {
+          console.error("Failed to set auth cookie:", e)
+        }
+
         router.replace("/admin/dashboard")
       } else {
         router.replace("/admin/login?error=auth_failed")

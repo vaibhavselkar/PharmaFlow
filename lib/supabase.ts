@@ -30,14 +30,11 @@ export async function signInWithGoogle() {
   return await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${location.origin}/auth/callback`,
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
+      redirectTo: `${location.origin}/admin/auth/callback`,
     },
   })
 }
+
 
 export async function signOut() {
   return await supabase.auth.signOut()
