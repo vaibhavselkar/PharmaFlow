@@ -8,8 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ShieldCheck, Loader2 } from "lucide-react"
+import { FaGoogle } from "react-icons/fa"
 import { decodeToken } from "@/lib/token"
 import type { AuthPayload } from "@/lib/types"
+import { signInWithGoogle } from "@/lib/supabase"
+
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -65,6 +68,22 @@ export default function AdminLoginPage() {
       setLoading(false)
     }
   }
+
+  async function handleGoogleLogin() {
+    setLoading(true)
+    try {
+      const { error } = await signInWithGoogle()
+      if (error) {
+        toast.error(error.message)
+        setLoading(false)
+      }
+      // Redirect will happen automatically via OAuth
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong. Please try again.")
+      setLoading(false)
+    }
+  }
+
 
   if (initializing) {
     return (
