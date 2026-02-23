@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { Loader2 } from "lucide-react"
 
+function encodeToken(payload: any): string {
+  const json = JSON.stringify(payload)
+  return btoa(encodeURIComponent(json))
+}
+
 export default function AuthCallbackPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -23,24 +28,22 @@ export default function AuthCallbackPage() {
         const email = session.user.email || ""
         const name = session.user.user_metadata?.full_name || ""
         
-        try {
-          const response = await fetch("/api/auth/google", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, name }),
-          })
-          
-          if (response.ok) {
-            // Use window.location to ensure full page reload with cookie
-            window.location.href = "/admin/dashboard"
-            return
-          }
-        } catch (e) {
-          console.error("Failed to set auth cookie:", e)
-        }
+        // Set cookie directly in browser
+        const token = encodeToken({
+          userId: `google-${email}`,
+          role: "pharmacy_owner",
+          email,
+          name: name || email.split("@")[0],
+        })
         
-        // Fallback to router if fetch fails
-        router.replace("/admin/dashboard")
+        // Set the cookie with all necessary attributes
+        const cookieString = `pharmaflow_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
+        document.cookie = cookieString
+        
+        console.log("Cookie set:", document.cookie)
+        
+        // Use window.location to ensure full page reload with cookie
+        window.location.href = "/admin/dashboard"
         return
       }
       
