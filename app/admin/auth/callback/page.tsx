@@ -36,14 +36,15 @@ export default function AuthCallbackPage() {
           name: name || email.split("@")[0],
         })
         
-        // Set the cookie with all necessary attributes
-        const cookieString = `pharmaflow_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
-        document.cookie = cookieString
+        // Set cookie with proper attributes for Vercel/production
+        document.cookie = `pharmaflow_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
         
-        console.log("Cookie set:", document.cookie)
+        console.log("Cookie set, redirecting to dashboard...")
         
-        // Use window.location to ensure full page reload with cookie
-        window.location.href = "/admin/dashboard"
+        // Small delay then redirect
+        setTimeout(() => {
+          window.location.href = "/admin/dashboard"
+        }, 200)
         return
       }
       

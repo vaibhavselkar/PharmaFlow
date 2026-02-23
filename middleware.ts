@@ -23,24 +23,46 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // Check for our custom auth cookie FIRST
+  const pharmaflowToken = request.cookies.get("pharmaflow_token")?.value
+  let isAuthenticated = false
+  
+  if (pharmaflowToken) {
+    try {
+      // Decode the token (base64 -> json)
+      const decoded = JSON.parse(decodeURIComponent(atob(pharmaflowToken)))
+      if (decoded.userId && decoded.role && decoded.email) {
+        isAuthenticated = true
+      }
+    } catch (e) {
+      // Invalid token
+    }
+  }
+  
+  // Also check Supabase auth as fallback
+  if (!isAuthenticated) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      isAuthenticated = true
+    }
+  }
 
   const pathname = request.nextUrl.pathname
 
-  // ✅ NEVER block the auth callback — it needs to run freely to set the session
-  if (pathname.startsWith("/auth/callback")) {
+  // Never block the auth callback
+  if (pathname.startsWith("/admin/auth/callback")) {
     return supabaseResponse
   }
 
   // Protect dashboard — redirect to login if not authenticated
-  if (!user && pathname.startsWith("/admin/dashboard")) {
+  if (!isAuthenticated && pathname.startsWith("/admin/dashboard")) {
     const url = request.nextUrl.clone()
     url.pathname = "/admin/login"
     return NextResponse.redirect(url)
   }
 
   // Already logged in — skip login page
-  if (user && pathname === "/admin/login") {
+  if (isAuthenticated && pathname === "/admin/login") {
     const url = request.nextUrl.clone()
     url.pathname = "/admin/dashboard"
     return NextResponse.redirect(url)
