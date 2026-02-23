@@ -1,66 +1,56 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
-import { decodeToken } from "@/lib/token"
+import { createServerClient } from "@supabase/ssr"
+import { NextResponse, type NextRequest } from "next/server"
 
-const publicPaths = [
-  "/login", 
-  "/register",
-  "/api/auth/login",
-  "/admin/login",
-  "/admin/auth/callback",
-]
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request })
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-
-  // Allow public paths and static files
-  if (
-    publicPaths.some((p) => pathname.startsWith(p)) ||
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon") ||
-    pathname === "/"
-  ) {
-    return NextResponse.next()
-  }
-
-  // Get token from cookie
-  const token = request.cookies.get("pharmaflow_token")?.value
-  const auth = token ? decodeToken(token) : null
-
-  // If not authenticated, redirect to appropriate login page
-  if (!auth) {
-    const url = request.nextUrl.clone()
-    // Admin routes go to admin login, others go to regular login
-    if (pathname.startsWith("/admin")) {
-      url.pathname = "/admin/login"
-    } else {
-      url.pathname = "/login"
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
     }
-    return NextResponse.redirect(url)
+  )
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const pathname = request.nextUrl.pathname
+
+  // ✅ NEVER block the auth callback — it needs to run freely to set the session
+  if (pathname.startsWith("/auth/callback")) {
+    return supabaseResponse
   }
 
-  // Role-based route protection
-  if (pathname.startsWith("/dashboard/pharmacy") && auth.role !== "pharmacy_owner") {
+  // Protect dashboard — redirect to login if not authenticated
+  if (!user && pathname.startsWith("/admin/dashboard")) {
     const url = request.nextUrl.clone()
-    url.pathname = "/login"
+    url.pathname = "/admin/login"
     return NextResponse.redirect(url)
   }
 
-  if (pathname.startsWith("/dashboard/distributor") && auth.role !== "distributor") {
+  // Already logged in — skip login page
+  if (user && pathname === "/admin/login") {
     const url = request.nextUrl.clone()
-    url.pathname = "/login"
+    url.pathname = "/admin/dashboard"
     return NextResponse.redirect(url)
   }
 
-  if (pathname.startsWith("/dashboard/agent") && auth.role !== "agent") {
-    const url = request.nextUrl.clone()
-    url.pathname = "/login"
-    return NextResponse.redirect(url)
-  }
-
-  return NextResponse.next()
+  return supabaseResponse
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 }
