@@ -29,28 +29,28 @@ export default function AdminDashboardPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [newInviteRole, setNewInviteRole] = useState<"pharmacy" | "agent">("pharmacy")
 
-  // Set up auth state listener
+  // Check auth using our cookie
   useEffect(() => {
-    // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
+    function checkAuth() {
+      const cookie = document.cookie
+      const match = cookie.match(/pharmaflow_token=([^;]+)/)
+      if (!match) {
         router.push("/admin/login")
-      } else {
-        setUser(session.user)
+        return
+      }
+      
+      // Decode the token to get user info
+      try {
+        const token = match[1]
+        const decoded = JSON.parse(decodeURIComponent(atob(token)))
+        setUser({ email: decoded.email, user_metadata: { full_name: decoded.name } })
         setLoading(false)
-      }
-    })
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
+      } catch (e) {
         router.push("/admin/login")
-      } else {
-        setUser(session.user)
       }
-    })
-
-    return () => subscription.unsubscribe()
+    }
+    
+    checkAuth()
   }, [router])
 
   function generateInviteToken(): string {
@@ -79,11 +79,8 @@ export default function AdminDashboardPage() {
   }
 
   async function handleSignOut() {
-    const { error } = await signOut()
-    if (error) {
-      toast.error(error.message)
-      return
-    }
+    // Clear our auth cookie
+    document.cookie = "pharmaflow_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
     toast.success("Signed out successfully")
     router.push("/admin/login")
   }
