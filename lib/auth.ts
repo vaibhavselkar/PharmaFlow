@@ -10,13 +10,14 @@ export async function setAuthCookie(payload: AuthPayload): Promise<void> {
   const token = encodeToken(payload)
   const cookieStore = await cookies()
   cookieStore.set(COOKIE_NAME, token, {
-    httpOnly: true,
+    httpOnly: false, // Changed to false so client-side JS can read it
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 7, // 7 days
   })
 }
+
 
 export async function clearAuthCookie(): Promise<void> {
   const cookieStore = await cookies()
