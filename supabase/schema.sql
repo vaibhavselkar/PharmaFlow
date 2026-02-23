@@ -99,7 +99,7 @@ CREATE TABLE admin_profiles (
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_pharmacies_distributor ON agents(distributor_id);
+CREATE INDEX idx_agents_distributor ON agents(distributor_id);
 CREATE INDEX idx_medicines_distributor ON medicines(distributor_id);
 CREATE INDEX idx_orders_pharmacy ON orders(pharmacy_id);
 CREATE INDEX idx_orders_distributor ON orders(distributor_id);
@@ -172,76 +172,208 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Insert sample data
+-- Insert sample data (using proper UUID format or letting DB generate)
 
 -- Sample Distributor
-INSERT INTO distributors (id, agency_name, contact_email, contact_phone, address, city, state)
+INSERT INTO distributors (agency_name, contact_email, contact_phone, address, city, state)
 VALUES 
-  ('dist-00001-0001-0001-0001-000000000001', 'MedSupply Distributors', 'distributor@demo.com', '+91-9876543210', '42 Industrial Area, Phase 2', 'Mumbai', 'Maharashtra');
+  ('MedSupply Distributors', 'distributor@demo.com', '+91-9876543210', '42 Industrial Area, Phase 2', 'Mumbai', 'Maharashtra');
 
--- Sample Pharmacies
-INSERT INTO pharmacies (id, store_name, owner_name, contact_phone, email, address, city, state, license_number)
-VALUES 
-  ('pharmacy-00001-0001-0001', 'HealthFirst Pharmacy', 'Rajesh Patel', '+91-9812345678', 'pharmacy@demo.com', '12 MG Road', 'Mumbai', 'Maharashtra', 'MH-PH-2024-001'),
-  ('pharmacy-00002-0001-0002', 'City Care Pharmacy', 'Meena Gupta', '+91-9823456789', 'pharmacy2@demo.com', '88 Station Road', 'Pune', 'Maharashtra', 'MH-PH-2024-002'),
-  ('pharmacy-00003-0001-0003', 'Green Cross Pharmacy', 'Suresh Kumar', '+91-9834567890', 'pharmacy3@demo.com', '5 Civil Lines', 'Nagpur', 'Maharashtra', 'MH-PH-2024-003');
+-- Get the distributor ID for use in other inserts
+DO $$
+DECLARE
+  dist_id UUID;
+BEGIN
+  SELECT id INTO dist_id FROM distributors WHERE contact_email = 'distributor@demo.com';
+  
+  -- Sample Pharmacies
+  INSERT INTO pharmacies (store_name, owner_name, contact_phone, email, address, city, state, license_number)
+  VALUES 
+    ('HealthFirst Pharmacy', 'Rajesh Patel', '+91-9812345678', 'pharmacy@demo.com', '12 MG Road', 'Mumbai', 'Maharashtra', 'MH-PH-2024-001'),
+    ('City Care Pharmacy', 'Meena Gupta', '+91-9823456789', 'pharmacy2@demo.com', '88 Station Road', 'Pune', 'Maharashtra', 'MH-PH-2024-002'),
+    ('Green Cross Pharmacy', 'Suresh Kumar', '+91-9834567890', 'pharmacy3@demo.com', '5 Civil Lines', 'Nagpur', 'Maharashtra', 'MH-PH-2024-003');
 
--- Sample Agents
-INSERT INTO agents (id, name, contact_phone, email, distributor_id)
-VALUES 
-  ('agent-00001-0001-0001', 'Vikram Singh', '+91-9845678901', 'agent@demo.com', 'dist-00001-0001-0001-0001-000000000001');
+  -- Sample Agents
+  INSERT INTO agents (name, contact_phone, email, distributor_id)
+  VALUES 
+    ('Vikram Singh', '+91-9845678901', 'agent@demo.com', dist_id);
 
--- Sample Agent Assignments
-INSERT INTO agent_assignments (id, agent_id, pharmacy_id)
-VALUES 
-  ('assign-00001-0001-0001', 'agent-00001-0001-0001', 'pharmacy-00001-0001-0001'),
-  ('assign-00001-0001-0002', 'agent-00001-0001-0001', 'pharmacy-00002-0001-0002');
+  -- Sample Agent Assignments
+  INSERT INTO agent_assignments (agent_id, pharmacy_id)
+  SELECT a.id, p.id
+  FROM agents a, pharmacies p
+  WHERE a.email = 'agent@demo.com'
+  AND p.store_name IN ('HealthFirst Pharmacy', 'City Care Pharmacy')
+  LIMIT 2;
 
--- Sample Medicines
-INSERT INTO medicines (id, distributor_id, name, salt_name, brand, mrp, stock, category, description)
-VALUES 
-  ('med-00001-0001-0001', 'dist-00001-0001-0001-0001-000000000001', 'Amoxil 500', 'Amoxicillin', 'GSK', 125.00, 500, 'Antibiotics', 'Broad-spectrum antibiotic'),
-  ('med-00001-0001-0002', 'dist-00001-0001-0001-0001-000000000001', 'Crocin Advance', 'Paracetamol', 'GSK', 32.00, 1200, 'Pain Relief', 'Fever and pain relief'),
-  ('med-00001-0001-0003', 'dist-00001-0001-0001-0001-000000000001', 'Glycomet 500', 'Metformin', 'USV', 45.00, 800, 'Diabetes', 'Type 2 diabetes management'),
-  ('med-00001-0001-0004', 'dist-00001-0001-0001-0001-000000000001', 'Atorva 10', 'Atorvastatin', 'Zydus', 98.00, 350, 'Cardiac', 'Cholesterol management'),
-  ('med-00001-0001-0005', 'dist-00001-0001-0001-0001-000000000001', 'Omez 20', 'Omeprazole', 'Dr. Reddys', 65.00, 900, 'Gastric', 'Acid reflux and ulcer treatment'),
-  ('med-00001-0001-0006', 'dist-00001-0001-0001-0001-000000000001', 'Ciplox 500', 'Ciprofloxacin', 'Cipla', 78.00, 420, 'Antibiotics', 'Fluoroquinolone antibiotic'),
-  ('med-00001-0001-0007', 'dist-00001-0001-0001-0001-000000000001', 'Brufen 400', 'Ibuprofen', 'Abbott', 38.00, 1500, 'Pain Relief', 'Anti-inflammatory pain relief'),
-  ('med-00001-0001-0008', 'dist-00001-0001-0001-0001-000000000001', 'Stamlo 5', 'Amlodipine', 'Dr. Reddys', 55.00, 600, 'Cardiac', 'Blood pressure management'),
-  ('med-00001-0001-0009', 'dist-00001-0001-0001-0001-000000000001', 'Repace 50', 'Losartan', 'Sun Pharma', 82.00, 300, 'Cardiac', 'Hypertension treatment'),
-  ('med-00001-0001-0010', 'dist-00001-0001-0001-0001-000000000001', 'Alerid 10', 'Cetirizine', 'Cipla', 28.00, 2000, 'Allergy', 'Antihistamine for allergies'),
-  ('med-00001-0001-0011', 'dist-00001-0001-0001-0001-000000000001', 'Azithral 500', 'Azithromycin', 'Alembic', 110.00, 250, 'Antibiotics', 'Macrolide antibiotic'),
-  ('med-00001-0001-0012', 'dist-00001-0001-0001-0001-000000000001', 'Pan 40', 'Pantoprazole', 'Alkem', 72.00, 700, 'Gastric', 'Proton pump inhibitor'),
-  ('med-00001-0001-0013', 'dist-00001-0001-0001-0001-000000000001', 'Montair 10', 'Montelukast', 'Cipla', 145.00, 180, 'Respiratory', 'Asthma and allergy management'),
-  ('med-00001-0001-0014', 'dist-00001-0001-0001-0001-000000000001', 'Doxyt-SL', 'Doxycycline', 'Dr. Reddys', 92.00, 330, 'Antibiotics', 'Tetracycline antibiotic'),
-  ('med-00001-0001-0015', 'dist-00001-0001-0001-0001-000000000001', 'Zinetac 150', 'Ranitidine', 'GSK', 25.00, 400, 'Gastric', 'H2 receptor antagonist'),
-  ('med-00001-0001-0016', 'dist-00001-0001-0001-0001-000000000001', 'Mox 500', 'Amoxicillin', 'Ranbaxy', 95.00, 380, 'Antibiotics', 'Broad-spectrum antibiotic'),
-  ('med-00001-0001-0017', 'dist-00001-0001-0001-0001-000000000001', 'Dolo 650', 'Paracetamol', 'Micro Labs', 30.00, 2500, 'Pain Relief', 'Fever and pain relief');
+  -- Sample Medicines
+  INSERT INTO medicines (distributor_id, name, salt_name, brand, mrp, stock, category, description)
+  VALUES 
+    (dist_id, 'Amoxil 500', 'Amoxicillin', 'GSK', 125.00, 500, 'Antibiotics', 'Broad-spectrum antibiotic'),
+    (dist_id, 'Crocin Advance', 'Paracetamol', 'GSK', 32.00, 1200, 'Pain Relief', 'Fever and pain relief'),
+    (dist_id, 'Glycomet 500', 'Metformin', 'USV', 45.00, 800, 'Diabetes', 'Type 2 diabetes management'),
+    (dist_id, 'Atorva 10', 'Atorvastatin', 'Zydus', 98.00, 350, 'Cardiac', 'Cholesterol management'),
+    (dist_id, 'Omez 20', 'Omeprazole', 'Dr. Reddys', 65.00, 900, 'Gastric', 'Acid reflux and ulcer treatment'),
+    (dist_id, 'Ciplox 500', 'Ciprofloxacin', 'Cipla', 78.00, 420, 'Antibiotics', 'Fluoroquinolone antibiotic'),
+    (dist_id, 'Brufen 400', 'Ibuprofen', 'Abbott', 38.00, 1500, 'Pain Relief', 'Anti-inflammatory pain relief'),
+    (dist_id, 'Stamlo 5', 'Amlodipine', 'Dr. Reddys', 55.00, 600, 'Cardiac', 'Blood pressure management'),
+    (dist_id, 'Repace 50', 'Losartan', 'Sun Pharma', 82.00, 300, 'Cardiac', 'Hypertension treatment'),
+    (dist_id, 'Alerid 10', 'Cetirizine', 'Cipla', 28.00, 2000, 'Allergy', 'Antihistamine for allergies'),
+    (dist_id, 'Azithral 500', 'Azithromycin', 'Alembic', 110.00, 250, 'Antibiotics', 'Macrolide antibiotic'),
+    (dist_id, 'Pan 40', 'Pantoprazole', 'Alkem', 72.00, 700, 'Gastric', 'Proton pump inhibitor'),
+    (dist_id, 'Montair 10', 'Montelukast', 'Cipla', 145.00, 180, 'Respiratory', 'Asthma and allergy management'),
+    (dist_id, 'Doxyt-SL', 'Doxycycline', 'Dr. Reddys', 92.00, 330, 'Antibiotics', 'Tetracycline antibiotic'),
+    (dist_id, 'Zinetac 150', 'Ranitidine', 'GSK', 25.00, 400, 'Gastric', 'H2 receptor antagonist'),
+    (dist_id, 'Mox 500', 'Amoxicillin', 'Ranbaxy', 95.00, 380, 'Antibiotics', 'Broad-spectrum antibiotic'),
+    (dist_id, 'Dolo 650', 'Paracetamol', 'Micro Labs', 30.00, 2500, 'Pain Relief', 'Fever and pain relief');
 
--- Sample Orders
-INSERT INTO orders (id, pharmacy_id, pharmacy_name, distributor_id, status, special_instructions, total_amount, created_at, updated_at)
-VALUES 
-  ('order-00001-0001-0001', 'pharmacy-00001-0001-0001', 'HealthFirst Pharmacy', 'dist-00001-0001-0001-0001-000000000001', 'delivered', 'Deliver before 10 AM', 9450.00, NOW() - INTERVAL '10 days', NOW() - INTERVAL '8 days'),
-  ('order-00001-0001-0002', 'pharmacy-00001-0001-0001', 'HealthFirst Pharmacy', 'dist-00001-0001-0001-0001-000000000001', 'out_for_delivery', NULL, 4190.00, NOW() - INTERVAL '3 days', NOW() - INTERVAL '1 day'),
-  ('order-00001-0001-0003', 'pharmacy-00002-0001-0002', 'City Care Pharmacy', 'dist-00001-0001-0001-0001-000000000001', 'packed', 'Fragile items - handle with care', 7495.00, NOW() - INTERVAL '2 days', NOW() - INTERVAL '1 day'),
-  ('order-00001-0001-0004', 'pharmacy-00001-0001-0001', 'HealthFirst Pharmacy', 'dist-00001-0001-0001-0001-000000000001', 'pending', NULL, 4100.00, NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
-  ('order-00001-0001-0005', 'pharmacy-00003-0001-0003', 'Green Cross Pharmacy', 'dist-00001-0001-0001-0001-000000000001', 'pending', 'Call before delivery', 5620.00, NOW(), NOW());
+  -- Sample Orders
+  INSERT INTO orders (pharmacy_id, pharmacy_name, distributor_id, status, special_instructions, total_amount, created_at, updated_at)
+  SELECT 
+    p.id,
+    p.store_name,
+    dist_id,
+    'delivered',
+    'Deliver before 10 AM',
+    9450.00,
+    NOW() - INTERVAL '10 days',
+    NOW() - INTERVAL '8 days'
+  FROM pharmacies p WHERE p.store_name = 'HealthFirst Pharmacy';
 
--- Sample Order Items
-INSERT INTO order_items (id, order_id, medicine_id, medicine_name, quantity, unit_price)
-VALUES 
-  ('oi-00001-0001-0001', 'order-00001-0001-0001', 'med-00001-0001-0001', 'Amoxil 500', 50, 125.00),
-  ('oi-00001-0001-0002', 'order-00001-0001-0001', 'med-00001-0001-0002', 'Crocin Advance', 100, 32.00),
-  ('oi-00001-0001-0003', 'order-00001-0001-0002', 'med-00001-0001-0005', 'Omez 20', 30, 65.00),
-  ('oi-00001-0001-0004', 'order-00001-0001-0002', 'med-00001-0001-0010', 'Alerid 10', 80, 28.00),
-  ('oi-00001-0001-0005', 'order-00001-0001-0003', 'med-00001-0001-0003', 'Glycomet 500', 40, 45.00),
-  ('oi-00001-0001-0006', 'order-00001-0001-0003', 'med-00001-0001-0008', 'Stamlo 5', 25, 55.00),
-  ('oi-00001-0001-0007', 'order-00001-0001-0003', 'med-00001-0001-0012', 'Pan 40', 60, 72.00),
-  ('oi-00001-0001-0008', 'order-00001-0001-0004', 'med-00001-0001-0011', 'Azithral 500', 20, 110.00),
-  ('oi-00001-0001-0009', 'order-00001-0001-0004', 'med-00001-0001-0007', 'Brufen 400', 50, 38.00),
-  ('oi-00001-0001-0010', 'order-00001-0001-0005', 'med-00001-0001-0004', 'Atorva 10', 30, 98.00),
-  ('oi-00001-0001-0011', 'order-00001-0001-0005', 'med-00001-0001-0009', 'Repace 50', 15, 82.00),
-  ('oi-00001-0001-0012', 'order-00001-0001-0005', 'med-00001-0001-0013', 'Montair 10', 10, 145.00);
+  INSERT INTO orders (pharmacy_id, pharmacy_name, distributor_id, status, special_instructions, total_amount, created_at, updated_at)
+  SELECT 
+    p.id,
+    p.store_name,
+    dist_id,
+    'out_for_delivery',
+    NULL,
+    4190.00,
+    NOW() - INTERVAL '3 days',
+    NOW() - INTERVAL '1 day'
+  FROM pharmacies p WHERE p.store_name = 'HealthFirst Pharmacy';
+
+  INSERT INTO orders (pharmacy_id, pharmacy_name, distributor_id, status, special_instructions, total_amount, created_at, updated_at)
+  SELECT 
+    p.id,
+    p.store_name,
+    dist_id,
+    'packed',
+    'Fragile items - handle with care',
+    7495.00,
+    NOW() - INTERVAL '2 days',
+    NOW() - INTERVAL '1 day'
+  FROM pharmacies p WHERE p.store_name = 'City Care Pharmacy';
+
+  INSERT INTO orders (pharmacy_id, pharmacy_name, distributor_id, status, special_instructions, total_amount, created_at, updated_at)
+  SELECT 
+    p.id,
+    p.store_name,
+    dist_id,
+    'pending',
+    NULL,
+    4100.00,
+    NOW() - INTERVAL '1 day',
+    NOW() - INTERVAL '1 day'
+  FROM pharmacies p WHERE p.store_name = 'HealthFirst Pharmacy';
+
+  INSERT INTO orders (pharmacy_id, pharmacy_name, distributor_id, status, special_instructions, total_amount, created_at, updated_at)
+  SELECT 
+    p.id,
+    p.store_name,
+    dist_id,
+    'pending',
+    'Call before delivery',
+    5620.00,
+    NOW(),
+    NOW()
+  FROM pharmacies p WHERE p.store_name = 'Green Cross Pharmacy';
+
+  -- Sample Order Items
+  INSERT INTO order_items (order_id, medicine_id, medicine_name, quantity, unit_price)
+  SELECT o.id, m.id, m.name, 50, 125.00
+  FROM orders o, medicines m
+  WHERE o.pharmacy_name = 'HealthFirst Pharmacy' AND o.status = 'delivered'
+  AND m.name = 'Amoxil 500'
+  LIMIT 1;
+
+  INSERT INTO order_items (order_id, medicine_id, medicine_name, quantity, unit_price)
+  SELECT o.id, m.id, m.name, 100, 32.00
+  FROM orders o, medicines m
+  WHERE o.pharmacy_name = 'HealthFirst Pharmacy' AND o.status = 'delivered'
+  AND m.name = 'Crocin Advance'
+  LIMIT 1;
+
+  INSERT INTO order_items (order_id, medicine_id, medicine_name, quantity, unit_price)
+  SELECT o.id, m.id, m.name, 30, 65.00
+  FROM orders o, medicines m
+  WHERE o.pharmacy_name = 'HealthFirst Pharmacy' AND o.status = 'out_for_delivery'
+  AND m.name = 'Omez 20'
+  LIMIT 1;
+
+  INSERT INTO order_items (order_id, medicine_id, medicine_name, quantity, unit_price)
+  SELECT o.id, m.id, m.name, 80, 28.00
+  FROM orders o, medicines m
+  WHERE o.pharmacy_name = 'HealthFirst Pharmacy' AND o.status = 'out_for_delivery'
+  AND m.name = 'Alerid 10'
+  LIMIT 1;
+
+  INSERT INTO order_items (order_id, medicine_id, medicine_name, quantity, unit_price)
+  SELECT o.id, m.id, m.name, 40, 45.00
+  FROM orders o, medicines m
+  WHERE o.pharmacy_name = 'City Care Pharmacy' AND o.status = 'packed'
+  AND m.name = 'Glycomet 500'
+  LIMIT 1;
+
+  INSERT INTO order_items (order_id, medicine_id, medicine_name, quantity, unit_price)
+  SELECT o.id, m.id, m.name, 25, 55.00
+  FROM orders o, medicines m
+  WHERE o.pharmacy_name = 'City Care Pharmacy' AND o.status = 'packed'
+  AND m.name = 'Stamlo 5'
+  LIMIT 1;
+
+  INSERT INTO order_items (order_id, medicine_id, medicine_name, quantity, unit_price)
+  SELECT o.id, m.id, m.name, 60, 72.00
+  FROM orders o, medicines m
+  WHERE o.pharmacy_name = 'City Care Pharmacy' AND o.status = 'packed'
+  AND m.name = 'Pan 40'
+  LIMIT 1;
+
+  INSERT INTO order_items (order_id, medicine_id, medicine_name, quantity, unit_price)
+  SELECT o.id, m.id, m.name, 20, 110.00
+  FROM orders o, medicines m
+  WHERE o.pharmacy_name = 'HealthFirst Pharmacy' AND o.status = 'pending'
+  AND m.name = 'Azithral 500'
+  LIMIT 1;
+
+  INSERT INTO order_items (order_id, medicine_id, medicine_name, quantity, unit_price)
+  SELECT o.id, m.id, m.name, 50, 38.00
+  FROM orders o, medicines m
+  WHERE o.pharmacy_name = 'HealthFirst Pharmacy' AND o.status = 'pending'
+  AND m.name = 'Brufen 400'
+  LIMIT 1;
+
+  INSERT INTO order_items (order_id, medicine_id, medicine_name, quantity, unit_price)
+  SELECT o.id, m.id, m.name, 30, 98.00
+  FROM orders o, medicines m
+  WHERE o.pharmacy_name = 'Green Cross Pharmacy' AND o.status = 'pending'
+  AND m.name = 'Atorva 10'
+  LIMIT 1;
+
+  INSERT INTO order_items (order_id, medicine_id, medicine_name, quantity, unit_price)
+  SELECT o.id, m.id, m.name, 15, 82.00
+  FROM orders o, medicines m
+  WHERE o.pharmacy_name = 'Green Cross Pharmacy' AND o.status = 'pending'
+  AND m.name = 'Repace 50'
+  LIMIT 1;
+
+  INSERT INTO order_items (order_id, medicine_id, medicine_name, quantity, unit_price)
+  SELECT o.id, m.id, m.name, 10, 145.00
+  FROM orders o, medicines m
+  WHERE o.pharmacy_name = 'Green Cross Pharmacy' AND o.status = 'pending'
+  AND m.name = 'Montair 10'
+  LIMIT 1;
+
+END $$;
 
 -- Display success message
 SELECT 'Database schema and sample data created successfully!' AS message;
