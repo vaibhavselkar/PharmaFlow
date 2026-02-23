@@ -2,7 +2,12 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { decodeToken } from "@/lib/token"
 
-const publicPaths = ["/login", "/api/auth/login"]
+const publicPaths = [
+  "/login", 
+  "/api/auth/login",
+  "/admin/login",
+  "/admin/auth/callback",
+]
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -21,10 +26,15 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get("pharmaflow_token")?.value
   const auth = token ? decodeToken(token) : null
 
-  // If not authenticated, redirect to login
+  // If not authenticated, redirect to appropriate login page
   if (!auth) {
     const url = request.nextUrl.clone()
-    url.pathname = "/login"
+    // Admin routes go to admin login, others go to regular login
+    if (pathname.startsWith("/admin")) {
+      url.pathname = "/admin/login"
+    } else {
+      url.pathname = "/login"
+    }
     return NextResponse.redirect(url)
   }
 
