@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { signOut, getCurrentUser } from "@/lib/supabase"
+import { signOut, getCurrentUser, supabase } from "@/lib/supabase"
 import { Copy, Link as LinkIcon, Plus, Users, Store, Truck } from "lucide-react"
 
 interface InviteLink {
@@ -31,12 +31,15 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     async function checkUser() {
-      const currentUser = await getCurrentUser()
-      if (!currentUser) {
+      // Check Supabase session
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
         router.push("/admin/login")
         return
       }
-      setUser(currentUser)
+      
+      setUser(session.user)
       setLoading(false)
     }
     checkUser()
