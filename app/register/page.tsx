@@ -13,6 +13,8 @@ import { signUpWithEmail, signInWithEmail } from "@/lib/supabase"
 export default function RegisterPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [mounted, setMounted] = useState(false)
+  
   const role = searchParams.get("role") as "pharmacy" | "agent" | null
   const token = searchParams.get("token")
 
@@ -31,12 +33,16 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // Validate invite token
-    if (!role || !token) {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    // Validate invite token only after mounting
+    if (mounted && (!role || !token)) {
       toast.error("Invalid invite link")
       router.push("/login")
     }
-  }, [role, token, router])
+  }, [mounted, role, token, router])
 
   async function handleRegister() {
     if (!formData.email || !formData.password) {
@@ -84,6 +90,14 @@ export default function RegisterPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    )
   }
 
   if (!role || !token) {
