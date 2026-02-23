@@ -11,56 +11,51 @@ export default function AuthCallbackPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Listen for auth state changes - Supabase will process the URL and set session
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        // Get user info from Supabase session
+    let attempts = 0
+    const maxAttempts = 10
+    
+    const checkSession = async () => {
+      attempts++
+      
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session?.user) {
         const email = session.user.email || ""
         const name = session.user.user_metadata?.full_name || ""
-
-        // Call our API to set the pharmaflow_token cookie
+        
         try {
-          await fetch("/api/auth/google", {
+          const response = await fetch("/api/auth/google", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, name }),
           })
+          
+          if (response.ok) {
+            // Use window.location to ensure full page reload with cookie
+            window.location.href = "/admin/dashboard"
+            return
+          }
         } catch (e) {
           console.error("Failed to set auth cookie:", e)
         }
-
+        
+        // Fallback to router if fetch fails
         router.replace("/admin/dashboard")
-      } else if (event === 'SIGNED_OUT') {
-        setError("Authentication failed")
+        return
+      }
+      
+      // If no session yet, try again (up to maxAttempts)
+      if (attempts < maxAttempts) {
+        setTimeout(checkSession, 1000)
+      } else {
+        setError("Authentication timed out - please try again")
         setLoading(false)
       }
-    })
-
-    // Also check after a timeout in case the event doesn't fire
-    setTimeout(() => {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session && loading) {
-          const email = session.user.email || ""
-          const name = session.user.user_metadata?.full_name || ""
-          
-          fetch("/api/auth/google", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, name }),
-          }).then(() => {
-            router.replace("/admin/dashboard")
-          })
-        } else if (loading) {
-          setError("Authentication failed - no session found")
-          setLoading(false)
-        }
-      })
-    }, 3000)
-
-    return () => {
-      subscription.unsubscribe()
     }
-  }, [router, loading])
+    
+    // Start checking after a short delay to allow Supabase to process URL
+    setTimeout(checkSession, 2000)
+  }, [router])
 
   if (error) {
     return (
