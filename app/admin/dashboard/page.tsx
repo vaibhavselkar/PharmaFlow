@@ -425,12 +425,16 @@ export default function AdminDashboardPage() {
                             )}
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => router.push(`/admin/distributors/${distributor.id}`)}
+                          >
+                            View Logistics
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
                           <Badge variant="secondary">Distributor</Badge>
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Joined {new Date(distributor.created_at).toLocaleDateString()}
-                          </span>
                         </div>
                       </div>
                     ))}
@@ -569,12 +573,16 @@ export default function AdminDashboardPage() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => router.push(`/admin/agents/${agent.id}`)}
+                          >
+                            View Logistics
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
                           <Badge variant="secondary">Agent</Badge>
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Joined {new Date(agent.created_at).toLocaleDateString()}
-                          </span>
                         </div>
                       </div>
                     ))}

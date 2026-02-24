@@ -313,3 +313,202 @@ export async function getAllOrdersWithDetails() {
 
   return orders || []
 }
+
+// Get distributor logistics data - orders, medicines, analytics
+export async function getDistributorLogistics(distributorId: string) {
+  // Get all orders from this distributor
+  const { data: orders } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('distributor_id', distributorId)
+    .order('created_at', { ascending: false })
+
+  // Get medicines from this distributor
+  const { data: medicines } = await supabase
+    .from('medicines')
+    .select('*')
+    .eq('distributor_id', distributorId)
+
+  // Calculate statistics
+  const totalOrders = orders?.length || 0
+  const deliveredOrders = orders?.filter(o => o.status === 'delivered').length || 0
+  const pendingOrders = orders?.filter(o => o.status === 'pending').length || 0
+  const packedOrders = orders?.filter(o => o.status === 'packed').length || 0
+  const outForDeliveryOrders = orders?.filter(o => o.status === 'out_for_delivery').length || 0
+  const totalRevenue = orders?.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0) || 0
+
+  // Get pharmacies served by this distributor
+  const pharmacyIds = [...new Set(orders?.map(o => o.pharmacy_id).filter(Boolean) || [])]
+  
+  return {
+    orders: orders || [],
+    medicines: medicines || [],
+    stats: {
+      totalOrders,
+      deliveredOrders,
+      pendingOrders,
+      packedOrders,
+      outForDeliveryOrders,
+      totalRevenue,
+      totalMedicines: medicines?.length || 0,
+      pharmaciesServed: pharmacyIds.length
+    }
+  }
+}
+
+// Get distributor analytics by time period
+export async function getDistributorAnalytics(distributorId: string, period: 'daily' | 'weekly' | 'monthly' = 'monthly') {
+  const { data: orders } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('distributor_id', distributorId)
+    .order('created_at', { ascending: true })
+
+  if (!orders || orders.length === 0) {
+    return { analytics: [], totalRevenue: 0, totalOrders: 0 }
+  }
+
+  // Group by period
+  const groupedData: Record<string, { revenue: number; orders: number; delivered: number }> = {}
+
+  orders.forEach(order => {
+    const date = new Date(order.created_at)
+    let key: string
+
+    if (period === 'daily') {
+      key = date.toISOString().split('T')[0]
+    } else if (period === 'weekly') {
+      const weekStart = new Date(date)
+      weekStart.setDate(date.getDate() - date.getDay())
+      key = weekStart.toISOString().split('T')[0]
+    } else {
+      key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    }
+
+    if (!groupedData[key]) {
+      groupedData[key] = { revenue: 0, orders: 0, delivered: 0 }
+    }
+    groupedData[key].revenue += Number(order.total_amount) || 0
+    groupedData[key].orders += 1
+    if (order.status === 'delivered') {
+      groupedData[key].delivered += 1
+    }
+  })
+
+  const analytics = Object.entries(groupedData).map(([periodKey, data]) => ({
+    period: periodKey,
+    ...data
+  }))
+
+  const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0)
+
+  return { analytics, totalRevenue, totalOrders: orders.length }
+}
+
+// Get agent logistics - deliveries, performance
+export async function getAgentLogistics(agentId: string) {
+  // Get agent details
+  const { data: agent } = await supabase
+    .from('agents')
+    .select('*')
+    .eq('id', agentId)
+    .single()
+
+  // Get pharmacies assigned to this agent
+  const { data: assignments } = await supabase
+    .from('agent_assignments')
+    .select('pharmacy_id')
+    .eq('agent_id', agentId)
+
+  const pharmacyIds = assignments?.map(a => a.pharmacy_id) || []
+
+  // Get orders for assigned pharmacies
+  const { data: orders } = await supabase
+    .from('orders')
+    .select('*')
+    .in('pharmacy_id', pharmacyIds)
+    .order('created_at', { ascending: false })
+
+  // Calculate statistics
+  const totalDeliveries = orders?.length || 0
+  const deliveredOrders = orders?.filter(o => o.status === 'delivered').length || 0
+  const pendingOrders = orders?.filter(o => o.status === 'pending').length || 0
+  const packedOrders = orders?.filter(o => o.status === 'packed').length || 0
+  const outForDeliveryOrders = orders?.filter(o => o.status === 'out_for_delivery').length || 0
+
+  // Get pharmacy details
+  const { data: pharmacies } = await supabase
+    .from('pharmacies')
+    .select('*')
+    .in('id', pharmacyIds)
+
+  return {
+    agent,
+    orders: orders || [],
+    assignedPharmacies: pharmacies || [],
+    stats: {
+      totalDeliveries,
+      deliveredOrders,
+      pendingOrders,
+      packedOrders,
+      outForDeliveryOrders,
+      pharmaciesCount: pharmacyIds.length
+    }
+  }
+}
+
+// Get agent analytics by time period
+export async function getAgentAnalytics(agentId: string, period: 'daily' | 'weekly' | 'monthly' = 'monthly') {
+  // Get pharmacies assigned to this agent
+  const { data: assignments } = await supabase
+    .from('agent_assignments')
+    .select('pharmacy_id')
+    .eq('agent_id', agentId)
+
+  const pharmacyIds = assignments?.map(a => a.pharmacy_id) || []
+
+  const { data: orders } = await supabase
+    .from('orders')
+    .select('*')
+    .in('pharmacy_id', pharmacyIds)
+    .order('created_at', { ascending: true })
+
+  if (!orders || orders.length === 0) {
+    return { analytics: [], totalDeliveries: 0, completedDeliveries: 0 }
+  }
+
+  // Group by period
+  const groupedData: Record<string, { deliveries: number; completed: number }> = {}
+
+  orders.forEach(order => {
+    const date = new Date(order.created_at)
+    let key: string
+
+    if (period === 'daily') {
+      key = date.toISOString().split('T')[0]
+    } else if (period === 'weekly') {
+      const weekStart = new Date(date)
+      weekStart.setDate(date.getDate() - date.getDay())
+      key = weekStart.toISOString().split('T')[0]
+    } else {
+      key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    }
+
+    if (!groupedData[key]) {
+      groupedData[key] = { deliveries: 0, completed: 0 }
+    }
+    groupedData[key].deliveries += 1
+    if (order.status === 'delivered') {
+      groupedData[key].completed += 1
+    }
+  })
+
+  const analytics = Object.entries(groupedData).map(([periodKey, data]) => ({
+    period: periodKey,
+    ...data
+  }))
+
+  const completedDeliveries = orders.filter(o => o.status === 'delivered').length
+
+  return { analytics, totalDeliveries: orders.length, completedDeliveries }
+}
