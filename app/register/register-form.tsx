@@ -8,7 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ShieldCheck, Store, Truck } from "lucide-react"
-import { signUpWithEmail, signInWithEmail, createPharmacy, createAgent } from "@/lib/supabase"
+import { signUpWithEmail, signInWithEmail, createPharmacy, createAgent, getPharmacyByEmail, getAgentByEmail } from "@/lib/supabase"
+import { setAuthCookie } from "@/lib/auth"
+import type { UserRole } from "@/lib/types"
 
 export default function RegisterForm() {
   const router = useRouter()
@@ -63,58 +65,43 @@ export default function RegisterForm() {
 
     setLoading(true)
     try {
-      // First, try to sign up
-      const { data: authData, error } = await signUpWithEmail(formData.email, formData.password)
-      
-      if (error) {
-        // If user already exists, try to sign in
-        if (error.message.includes("already been registered")) {
+      // Call the server API to register
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          role: role,
+          storeName: formData.storeName,
+          name: formData.name,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          licenseNumber: formData.licenseNumber,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        // If user already exists, try to sign in via client
+        if (data.error?.includes("already been registered")) {
           const { error: signInError } = await signInWithEmail(formData.email, formData.password)
           if (signInError) {
             toast.error(signInError.message)
             return
           }
-          // If sign in succeeds, redirect based on role
           toast.success("Welcome back!")
           router.push(role === "pharmacy" ? "/dashboard/pharmacy" : "/dashboard/agent")
           return
         }
-        toast.error(error.message)
+        toast.error(data.error || "Registration failed")
         return
       }
 
-      // After successful signup, save the user details to the appropriate table
-      if (role === "pharmacy") {
-        const { error: pharmacyError } = await createPharmacy({
-          store_name: formData.storeName,
-          owner_name: formData.name,
-          contact_phone: formData.phone,
-          email: formData.email,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          license_number: formData.licenseNumber,
-        })
-        
-        if (pharmacyError) {
-          console.error("Error creating pharmacy:", pharmacyError)
-          toast.warning("Account created but failed to save pharmacy details")
-        }
-      } else if (role === "agent") {
-        const { error: agentError } = await createAgent({
-          name: formData.name,
-          contact_phone: formData.phone,
-          email: formData.email,
-        })
-        
-        if (agentError) {
-          console.error("Error creating agent:", agentError)
-          toast.warning("Account created but failed to save agent details")
-        }
-      }
-
-      toast.success("Registration successful! Please check your email to verify your account.")
-      // For now, auto-login for demo purposes
+      toast.success("Registration successful!")
       router.push(role === "pharmacy" ? "/dashboard/pharmacy" : "/dashboard/agent")
     } catch {
       toast.error("Something went wrong. Please try again.")

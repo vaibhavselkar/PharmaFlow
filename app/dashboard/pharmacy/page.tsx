@@ -12,9 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Pill, ShoppingCart, Package, ClipboardList, IndianRupee } from "lucide-react"
 import type { Order, CartItem, Medicine } from "@/lib/types"
+import { getPharmacyByEmail } from "@/lib/supabase"
 
 export default function PharmacyDashboard() {
-  const [user, setUser] = useState<{ name: string; role: string } | null>(null)
+  const [user, setUser] = useState<{ name: string; role: string; email: string } | null>(null)
+  const [storeName, setStoreName] = useState<string>("")
   const [orders, setOrders] = useState<Order[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
   const [activeTab, setActiveTab] = useState("browse")
@@ -37,6 +39,14 @@ export default function PharmacyDashboard() {
       if (res.ok) {
         const data = await res.json()
         setUser(data.user)
+        
+        // Fetch pharmacy details from Supabase to get store name
+        if (data.user.email) {
+          const { data: pharmacyData } = await getPharmacyByEmail(data.user.email)
+          if (pharmacyData) {
+            setStoreName(pharmacyData.store_name)
+          }
+        }
       }
     }
     fetchUser()
@@ -92,7 +102,7 @@ export default function PharmacyDashboard() {
     <DashboardShell
       title="Pharmacy Dashboard"
       subtitle="Browse medicines, manage orders"
-      userName={user?.name || "Loading..."}
+      userName={storeName || user?.name || "Loading..."}
       userRole="Pharmacy Owner"
       navItems={navItems}
       navLabel="Navigation"

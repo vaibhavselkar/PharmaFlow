@@ -97,3 +97,21 @@ export async function getOrderCount() {
     .select('*', { count: 'exact', head: true })
   return count || 0
 }
+
+// Get pharmacy by email
+export async function getPharmacyByEmail(email: string) {
+  return await supabase
+    .from('pharmacies')
+    .select('*')
+    .eq('email', email)
+    .single()
+}
+
+// Get agent by email
+export async function getAgentByEmail(email: string) {
+  return await supabase
+    .from('agents')
+    .select('*')
+    .eq('email', email)
+    .single()
+}

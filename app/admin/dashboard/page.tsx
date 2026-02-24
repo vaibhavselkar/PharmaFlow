@@ -162,7 +162,7 @@ export default function AdminDashboardPage() {
             <p className="text-sm text-muted-foreground">Manage your platform</p>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{user?.email}</span>
+            <span className="text-sm text-muted-foreground">{user?.user_metadata?.full_name || user?.email}</span>
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               Sign Out
             </Button>
