@@ -8,9 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Store, Truck, Users, Link as LinkIcon, Plus, Loader2, Package, ShoppingCart, Mail, MapPin, Phone, Calendar, Warehouse } from "lucide-react"
+import { Store, Truck, Users, Link as LinkIcon, Plus, Loader2, Package, ShoppingCart, Mail, MapPin, Phone, Calendar, Warehouse, IndianRupee, CheckCircle, Clock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { getPharmacies, getAgents, getDistributors, getOrders, getPharmacyCount, getAgentCount, getDistributorCount, getOrderCount } from "@/lib/supabase"
+import { getPharmacies, getAgents, getDistributors, getOrders, getPharmacyCount, getAgentCount, getDistributorCount, getOrderCount, getOrderStats, getOrdersByMonth, getAgentStats } from "@/lib/supabase"
 
 interface InviteLink {
   id: string
@@ -71,6 +71,13 @@ export default function AdminDashboardPage() {
   const [agents, setAgents] = useState<Agent[]>([])
   const [distributors, setDistributors] = useState<Distributor[]>([])
   const [statsLoading, setStatsLoading] = useState(true)
+  
+  // Analytics data
+  const [totalRevenue, setTotalRevenue] = useState(0)
+  const [deliveredCount, setDeliveredCount] = useState(0)
+  const [pendingCount, setPendingCount] = useState(0)
+  const [monthlyData, setMonthlyData] = useState<Record<string, { revenue: number; count: number }>>({})
+  const [agentDeliveryStats, setAgentDeliveryStats] = useState<any[]>([])
 
   // Fetch data from database
   async function fetchDashboardData() {
@@ -96,6 +103,18 @@ export default function AdminDashboardPage() {
       
       const { data: distributorsData } = await getDistributors()
       if (distributorsData) setDistributors(distributorsData)
+      
+      // Fetch analytics data
+      const orderStats = await getOrderStats()
+      setTotalRevenue(orderStats.totalRevenue)
+      setDeliveredCount(orderStats.deliveredCount)
+      setPendingCount(orderStats.pendingCount)
+      
+      const monthly = await getOrdersByMonth()
+      setMonthlyData(monthly)
+      
+      const agentStats = await getAgentStats()
+      setAgentDeliveryStats(agentStats)
       
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
@@ -200,67 +219,142 @@ export default function AdminDashboardPage() {
 
           {/* Overview Tab */}
           <TabsContent value="overview">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Distributors</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <Warehouse className="h-5 w-5 text-indigo-500" />
-                    <p className="text-3xl font-bold">{statsLoading ? "..." : distributorCount}</p>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Analytics Section */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-4">Analytics & Revenue</h2>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <IndianRupee className="h-5 w-5 text-green-600" />
+                      <p className="text-3xl font-bold">{statsLoading ? "..." : `₹${totalRevenue.toLocaleString('en-IN')}`}</p>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Pharmacies</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <Store className="h-5 w-5 text-blue-500" />
-                    <p className="text-3xl font-bold">{statsLoading ? "..." : pharmacyCount}</p>
-                  </div>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Delivered Orders</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <p className="text-3xl font-bold">{statsLoading ? "..." : deliveredCount}</p>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Agents</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <Truck className="h-5 w-5 text-green-500" />
-                    <p className="text-3xl font-bold">{statsLoading ? "..." : agentCount}</p>
-                  </div>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Pending Orders</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-yellow-500" />
+                      <p className="text-3xl font-bold">{statsLoading ? "..." : pendingCount}</p>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Orders</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5 text-purple-500" />
-                    <p className="text-3xl font-bold">{statsLoading ? "..." : orderCount}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Active Invites</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <LinkIcon className="h-5 w-5 text-orange-500" />
-                    <p className="text-3xl font-bold">{inviteLinks.filter(l => !l.used).length}</p>
-                  </div>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Total Orders</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Package className="h-5 w-5 text-purple-500" />
+                      <p className="text-3xl font-bold">{statsLoading ? "..." : orderCount}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
+
+            {/* Platform Stats Section */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-4">Platform Overview</h2>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Distributors</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Warehouse className="h-5 w-5 text-indigo-500" />
+                      <p className="text-3xl font-bold">{statsLoading ? "..." : distributorCount}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Pharmacies</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Store className="h-5 w-5 text-blue-500" />
+                      <p className="text-3xl font-bold">{statsLoading ? "..." : pharmacyCount}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Agents</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-5 w-5 text-green-500" />
+                      <p className="text-3xl font-bold">{statsLoading ? "..." : agentCount}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Active Invites</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <LinkIcon className="h-5 w-5 text-orange-500" />
+                      <p className="text-3xl font-bold">{inviteLinks.filter(l => !l.used).length}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Agent Performance Section */}
+            {agentDeliveryStats.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-xl font-semibold mb-4">Delivery Agent Performance</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {agentDeliveryStats.map((agent) => (
+                    <Card key={agent.id}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">{agent.name}</CardTitle>
+                        <CardDescription>{agent.email}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex justify-between items-center">
+                          <div className="text-center">
+                            <p className="text-2xl font-bold">{agent.completedDeliveries || 0}</p>
+                            <p className="text-xs text-muted-foreground">Delivered</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold">{agent.totalDeliveries || 0}</p>
+                            <p className="text-xs text-muted-foreground">Total</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <Card className="mt-6">
               <CardHeader>
