@@ -8,13 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Store, Truck, Users, Link as LinkIcon, Plus, Loader2, Package, ShoppingCart, Mail, MapPin, Phone, Calendar } from "lucide-react"
+import { Store, Truck, Users, Link as LinkIcon, Plus, Loader2, Package, ShoppingCart, Mail, MapPin, Phone, Calendar, Warehouse } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { getPharmacies, getAgents, getOrders, getPharmacyCount, getAgentCount, getOrderCount } from "@/lib/supabase"
+import { getPharmacies, getAgents, getDistributors, getOrders, getPharmacyCount, getAgentCount, getDistributorCount, getOrderCount } from "@/lib/supabase"
 
 interface InviteLink {
   id: string
-  role: "pharmacy" | "agent"
+  role: "pharmacy" | "agent" | "distributor"
   token: string
   createdAt: string
   expiresAt: string
@@ -43,34 +43,49 @@ interface Agent {
   created_at: string
 }
 
+interface Distributor {
+  id: string
+  agency_name: string
+  contact_email: string
+  contact_phone: string
+  address: string
+  city: string
+  state: string
+  created_at: string
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [inviteLinks, setInviteLinks] = useState<InviteLink[]>([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [newInviteRole, setNewInviteRole] = useState<"pharmacy" | "agent">("pharmacy")
+  const [newInviteRole, setNewInviteRole] = useState<"pharmacy" | "agent" | "distributor">("pharmacy")
   
   // Data from database
   const [pharmacyCount, setPharmacyCount] = useState(0)
   const [agentCount, setAgentCount] = useState(0)
+  const [distributorCount, setDistributorCount] = useState(0)
   const [orderCount, setOrderCount] = useState(0)
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([])
   const [agents, setAgents] = useState<Agent[]>([])
+  const [distributors, setDistributors] = useState<Distributor[]>([])
   const [statsLoading, setStatsLoading] = useState(true)
 
   // Fetch data from database
   async function fetchDashboardData() {
     try {
-      const [pharmacyData, agentData, orderData] = await Promise.all([
+      const [pharmacyCountVal, agentCountVal, distributorCountVal, orderCountVal] = await Promise.all([
         getPharmacyCount(),
         getAgentCount(),
+        getDistributorCount(),
         getOrderCount()
       ])
       
-      setPharmacyCount(pharmacyData)
-      setAgentCount(agentData)
-      setOrderCount(orderData)
+      setPharmacyCount(pharmacyCountVal)
+      setAgentCount(agentCountVal)
+      setDistributorCount(distributorCountVal)
+      setOrderCount(orderCountVal)
       
       // Also fetch the actual records for display
       const { data: pharmaciesData } = await getPharmacies()
@@ -78,6 +93,9 @@ export default function AdminDashboardPage() {
       
       const { data: agentsData } = await getAgents()
       if (agentsData) setAgents(agentsData)
+      
+      const { data: distributorsData } = await getDistributors()
+      if (distributorsData) setDistributors(distributorsData)
       
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
@@ -116,7 +134,7 @@ export default function AdminDashboardPage() {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
   }
 
-  function createInviteLink(role: "pharmacy" | "agent") {
+  function createInviteLink(role: "pharmacy" | "agent" | "distributor") {
     const token = generateInviteToken()
     const newLink: InviteLink = {
       id: `invite-${Date.now()}`,
@@ -174,6 +192,7 @@ export default function AdminDashboardPage() {
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="distributors">Distributors</TabsTrigger>
             <TabsTrigger value="pharmacies">Pharmacies</TabsTrigger>
             <TabsTrigger value="agents">Delivery Agents</TabsTrigger>
             <TabsTrigger value="invites">Invite Links</TabsTrigger>
@@ -181,10 +200,22 @@ export default function AdminDashboardPage() {
 
           {/* Overview Tab */}
           <TabsContent value="overview">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Pharmacies</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Distributors</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <Warehouse className="h-5 w-5 text-indigo-500" />
+                    <p className="text-3xl font-bold">{statsLoading ? "..." : distributorCount}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Pharmacies</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
@@ -196,7 +227,7 @@ export default function AdminDashboardPage() {
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Agents</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Agents</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
@@ -208,7 +239,7 @@ export default function AdminDashboardPage() {
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Orders</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Orders</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
@@ -241,6 +272,76 @@ export default function AdminDashboardPage() {
                   <Plus className="mr-2 h-4 w-4" />
                   Create Invite Link
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Distributors Tab */}
+          <TabsContent value="distributors">
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Registered Distributors</CardTitle>
+                    <CardDescription>Distributors supplying medicines to pharmacies</CardDescription>
+                  </div>
+                  <Button onClick={() => {
+                    setNewInviteRole("distributor")
+                    setIsCreateDialogOpen(true)
+                  }}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Distributor
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {distributors.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Warehouse className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No distributors registered yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">Add a distributor to get started</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {distributors.map((distributor) => (
+                      <div key={distributor.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100">
+                            <Warehouse className="h-6 w-6 text-indigo-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-lg">{distributor.agency_name}</p>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                              <span className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {distributor.contact_email}
+                              </span>
+                              {distributor.contact_phone && (
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {distributor.contact_phone}
+                                </span>
+                              )}
+                            </div>
+                            {(distributor.city || distributor.state) && (
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                                <MapPin className="h-3 w-3" />
+                                {[distributor.address, distributor.city, distributor.state].filter(Boolean).join(", ")}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant="secondary">Distributor</Badge>
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Joined {new Date(distributor.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -457,6 +558,14 @@ export default function AdminDashboardPage() {
               <Label>Select Role</Label>
               <div className="flex gap-4">
                 <Button
+                  variant={newInviteRole === "distributor" ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => setNewInviteRole("distributor")}
+                >
+                  <Warehouse className="mr-2 h-4 w-4" />
+                  Distributor
+                </Button>
+                <Button
                   variant={newInviteRole === "pharmacy" ? "default" : "outline"}
                   className="flex-1"
                   onClick={() => setNewInviteRole("pharmacy")}
@@ -470,7 +579,7 @@ export default function AdminDashboardPage() {
                   onClick={() => setNewInviteRole("agent")}
                 >
                   <Truck className="mr-2 h-4 w-4" />
-                  Delivery Agent
+                  Agent
                 </Button>
               </div>
             </div>

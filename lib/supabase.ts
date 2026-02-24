@@ -115,3 +115,15 @@ export async function getAgentByEmail(email: string) {
     .eq('email', email)
     .single()
 }
+
+// Database operations for distributors
+export async function getDistributors() {
+  return await supabase.from('distributors').select('*').order('created_at', { ascending: false })
+}
+
+export async function getDistributorCount() {
+  const { count } = await supabase
+    .from('distributors')
+    .select('*', { count: 'exact', head: true })
+  return count || 0
+}
