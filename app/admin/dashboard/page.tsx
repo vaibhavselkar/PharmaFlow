@@ -5,12 +5,10 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { signOut, supabase } from "@/lib/supabase"
-import { Copy, Link as LinkIcon, Plus, Users, Store, Truck, Loader2 } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { Store, Truck, Users, Link as LinkIcon, Plus, Loader2, Package, ShoppingCart } from "lucide-react"
 
 interface InviteLink {
   id: string
@@ -64,7 +62,7 @@ export default function AdminDashboardPage() {
       role,
       token,
       createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toJSON(),
       used: false,
     }
     setInviteLinks([newLink, ...inviteLinks])
@@ -130,7 +128,7 @@ export default function AdminDashboardPage() {
                 <CardContent>
                   <div className="flex items-center gap-2">
                     <Store className="h-5 w-5 text-blue-500" />
-                    <p className="text-3xl font-bold">3</p>
+                    <p className="text-3xl font-bold">0</p>
                   </div>
                 </CardContent>
               </Card>
@@ -142,7 +140,7 @@ export default function AdminDashboardPage() {
                 <CardContent>
                   <div className="flex items-center gap-2">
                     <Truck className="h-5 w-5 text-green-500" />
-                    <p className="text-3xl font-bold">1</p>
+                    <p className="text-3xl font-bold">0</p>
                   </div>
                 </CardContent>
               </Card>
@@ -153,8 +151,8 @@ export default function AdminDashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-purple-500" />
-                    <p className="text-3xl font-bold">5</p>
+                    <ShoppingCart className="h-5 w-5 text-purple-500" />
+                    <p className="text-3xl font-bold">0</p>
                   </div>
                 </CardContent>
               </Card>
@@ -182,8 +180,6 @@ export default function AdminDashboardPage() {
                   <Plus className="mr-2 h-4 w-4" />
                   Create Invite Link
                 </Button>
-                <Button variant="outline">View All Orders</Button>
-                <Button variant="outline">Platform Settings</Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -207,37 +203,10 @@ export default function AdminDashboardPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-medium">HealthFirst Pharmacy</p>
-                      <p className="text-sm text-muted-foreground">Mumbai, Maharashtra</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm">Rajesh Patel</p>
-                      <p className="text-sm text-muted-foreground">Active</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-medium">City Care Pharmacy</p>
-                      <p className="text-sm text-muted-foreground">Pune, Maharashtra</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm">Meena Gupta</p>
-                      <p className="text-sm text-muted-foreground">Active</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-medium">Green Cross Pharmacy</p>
-                      <p className="text-sm text-muted-foreground">Nagpur, Maharashtra</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm">Suresh Kumar</p>
-                      <p className="text-sm text-muted-foreground">Active</p>
-                    </div>
-                  </div>
+                <div className="text-center py-12">
+                  <Store className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No pharmacies registered yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">Create an invite link to get started</p>
                 </div>
               </CardContent>
             </Card>
@@ -262,17 +231,10 @@ export default function AdminDashboardPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-medium">Vikram Singh</p>
-                      <p className="text-sm text-muted-foreground">+91-9845678901</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm">MedSupply Distributors</p>
-                      <p className="text-sm text-muted-foreground">Active</p>
-                    </div>
-                  </div>
+                <div className="text-center py-12">
+                  <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No delivery agents yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">Create an invite link to get started</p>
                 </div>
               </CardContent>
             </Card>
@@ -295,7 +257,7 @@ export default function AdminDashboardPage() {
               </CardHeader>
               <CardContent>
                 {inviteLinks.length === 0 ? (
-                  <div className="text-center py-8">
+                  <div className="text-center py-12">
                     <LinkIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">No invite links yet</p>
                     <Button className="mt-4" onClick={() => setIsCreateDialogOpen(true)}>
@@ -322,7 +284,7 @@ export default function AdminDashboardPage() {
                             size="sm"
                             onClick={() => copyInviteLink(link.token, link.role)}
                           >
-                            <Copy className="mr-2 h-4 w-4" />
+                            <Plus className="mr-2 h-4 w-4" />
                             Copy Link
                           </Button>
                         </div>
