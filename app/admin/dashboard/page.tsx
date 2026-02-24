@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Store, Truck, Users, Link as LinkIcon, Plus, Loader2, Package, ShoppingCart, Mail, MapPin, Phone, Calendar, Warehouse, IndianRupee, CheckCircle, Clock } from "lucide-react"
+import { Store, Truck, Users, Link as LinkIcon, Plus, Loader2, Package, ShoppingCart, Mail, MapPin, Phone, Calendar, Warehouse, IndianRupee, CheckCircle, Clock, ArrowRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { getPharmacies, getAgents, getDistributors, getOrders, getPharmacyCount, getAgentCount, getDistributorCount, getOrderCount, getOrderStats, getOrdersByMonth, getAgentStats } from "@/lib/supabase"
 
@@ -499,14 +499,18 @@ export default function AdminDashboardPage() {
                             )}
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => router.push(`/admin/pharmacies/${pharmacy.id}`)}
+                          >
+                            View Logistics
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
                           {pharmacy.license_number && (
                             <Badge variant="outline">{pharmacy.license_number}</Badge>
                           )}
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Joined {new Date(pharmacy.created_at).toLocaleDateString()}
-                          </span>
                         </div>
                       </div>
                     ))}

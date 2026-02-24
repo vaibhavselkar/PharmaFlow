@@ -211,3 +211,105 @@ export async function getAgentStats() {
 
   return agentStats
 }
+
+// Get pharmacy logistics data - orders, medicines, analytics
+export async function getPharmacyLogistics(pharmacyId: string) {
+  // Get all orders for this pharmacy
+  const { data: orders } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('pharmacy_id', pharmacyId)
+    .order('created_at', { ascending: false })
+
+  // Get order items for these orders
+  const orderIds = orders?.map(o => o.id) || []
+  const { data: orderItems } = await supabase
+    .from('order_items')
+    .select('*')
+    .in('order_id', orderIds)
+
+  // Calculate statistics
+  const totalOrders = orders?.length || 0
+  const deliveredOrders = orders?.filter(o => o.status === 'delivered').length || 0
+  const pendingOrders = orders?.filter(o => o.status === 'pending').length || 0
+  const packedOrders = orders?.filter(o => o.status === 'packed').length || 0
+  const outForDeliveryOrders = orders?.filter(o => o.status === 'out_for_delivery').length || 0
+  const totalSpent = orders?.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0) || 0
+
+  // Get unique medicines ordered
+  const medicinesOrdered = orderItems?.map(item => item.medicine_name) || []
+  const uniqueMedicines = [...new Set(medicinesOrdered)]
+
+  return {
+    orders: orders || [],
+    orderItems: orderItems || [],
+    stats: {
+      totalOrders,
+      deliveredOrders,
+      pendingOrders,
+      packedOrders,
+      outForDeliveryOrders,
+      totalSpent,
+      uniqueMedicinesCount: uniqueMedicines.length
+    }
+  }
+}
+
+// Get pharmacy analytics by time period (daily, weekly, monthly)
+export async function getPharmacyAnalytics(pharmacyId: string, period: 'daily' | 'weekly' | 'monthly' = 'monthly') {
+  const { data: orders } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('pharmacy_id', pharmacyId)
+    .order('created_at', { ascending: true })
+
+  if (!orders || orders.length === 0) {
+    return { analytics: [], totalRevenue: 0, totalOrders: 0 }
+  }
+
+  // Group by period
+  const groupedData: Record<string, { revenue: number; orders: number; delivered: number }> = {}
+
+  orders.forEach(order => {
+    const date = new Date(order.created_at)
+    let key: string
+
+    if (period === 'daily') {
+      key = date.toISOString().split('T')[0] // YYYY-MM-DD
+    } else if (period === 'weekly') {
+      const weekStart = new Date(date)
+      weekStart.setDate(date.getDate() - date.getDay())
+      key = weekStart.toISOString().split('T')[0]
+    } else {
+      key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    }
+
+    if (!groupedData[key]) {
+      groupedData[key] = { revenue: 0, orders: 0, delivered: 0 }
+    }
+    groupedData[key].revenue += Number(order.total_amount) || 0
+    groupedData[key].orders += 1
+    if (order.status === 'delivered') {
+      groupedData[key].delivered += 1
+    }
+  })
+
+  const analytics = Object.entries(groupedData).map(([periodKey, data]) => ({
+    period: periodKey,
+    ...data
+  }))
+
+  const totalRevenue = orders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0)
+
+  return { analytics, totalRevenue, totalOrders: orders.length }
+}
+
+// Get all orders for admin view with pharmacy details
+export async function getAllOrdersWithDetails() {
+  const { data: orders } = await supabase
+    .from('orders')
+    .select('*, pharmacies(store_name, owner_name, email)')
+    .order('created_at', { ascending: false })
+
+  return orders || []
+}
