@@ -39,3 +39,61 @@ export async function signInWithGoogle() {
 export async function signOut() {
   return await supabase.auth.signOut()
 }
+
+// Database operations for pharmacies
+export async function createPharmacy(data: {
+  store_name: string
+  owner_name: string
+  contact_phone?: string
+  email: string
+  address?: string
+  city?: string
+  state?: string
+  license_number?: string
+}) {
+  return await supabase.from('pharmacies').insert(data).select()
+}
+
+export async function getPharmacies() {
+  return await supabase.from('pharmacies').select('*').order('created_at', { ascending: false })
+}
+
+export async function getPharmacyCount() {
+  const { count } = await supabase
+    .from('pharmacies')
+    .select('*', { count: 'exact', head: true })
+  return count || 0
+}
+
+// Database operations for agents
+export async function createAgent(data: {
+  name: string
+  contact_phone?: string
+  email: string
+  distributor_id?: string
+}) {
+  return await supabase.from('agents').insert(data).select()
+}
+
+export async function getAgents() {
+  return await supabase.from('agents').select('*').order('created_at', { ascending: false })
+}
+
+export async function getAgentCount() {
+  const { count } = await supabase
+    .from('agents')
+    .select('*', { count: 'exact', head: true })
+  return count || 0
+}
+
+// Database operations for orders
+export async function getOrders() {
+  return await supabase.from('orders').select('*').order('created_at', { ascending: false })
+}
+
+export async function getOrderCount() {
+  const { count } = await supabase
+    .from('orders')
+    .select('*', { count: 'exact', head: true })
+  return count || 0
+}

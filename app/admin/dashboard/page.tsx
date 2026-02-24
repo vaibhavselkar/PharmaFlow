@@ -8,7 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Store, Truck, Users, Link as LinkIcon, Plus, Loader2, Package, ShoppingCart } from "lucide-react"
+import { Store, Truck, Users, Link as LinkIcon, Plus, Loader2, Package, ShoppingCart, Mail, MapPin, Phone, Calendar } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { getPharmacies, getAgents, getOrders, getPharmacyCount, getAgentCount, getOrderCount } from "@/lib/supabase"
 
 interface InviteLink {
   id: string
@@ -19,6 +21,28 @@ interface InviteLink {
   used: boolean
 }
 
+interface Pharmacy {
+  id: string
+  store_name: string
+  owner_name: string
+  contact_phone: string
+  email: string
+  address: string
+  city: string
+  state: string
+  license_number: string
+  created_at: string
+}
+
+interface Agent {
+  id: string
+  name: string
+  contact_phone: string
+  email: string
+  distributor_id: string
+  created_at: string
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
@@ -26,6 +50,41 @@ export default function AdminDashboardPage() {
   const [inviteLinks, setInviteLinks] = useState<InviteLink[]>([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [newInviteRole, setNewInviteRole] = useState<"pharmacy" | "agent">("pharmacy")
+  
+  // Data from database
+  const [pharmacyCount, setPharmacyCount] = useState(0)
+  const [agentCount, setAgentCount] = useState(0)
+  const [orderCount, setOrderCount] = useState(0)
+  const [pharmacies, setPharmacies] = useState<Pharmacy[]>([])
+  const [agents, setAgents] = useState<Agent[]>([])
+  const [statsLoading, setStatsLoading] = useState(true)
+
+  // Fetch data from database
+  async function fetchDashboardData() {
+    try {
+      const [pharmacyData, agentData, orderData] = await Promise.all([
+        getPharmacyCount(),
+        getAgentCount(),
+        getOrderCount()
+      ])
+      
+      setPharmacyCount(pharmacyData)
+      setAgentCount(agentData)
+      setOrderCount(orderData)
+      
+      // Also fetch the actual records for display
+      const { data: pharmaciesData } = await getPharmacies()
+      if (pharmaciesData) setPharmacies(pharmaciesData)
+      
+      const { data: agentsData } = await getAgents()
+      if (agentsData) setAgents(agentsData)
+      
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error)
+    } finally {
+      setStatsLoading(false)
+    }
+  }
 
   // Check auth using our cookie
   useEffect(() => {
@@ -43,6 +102,8 @@ export default function AdminDashboardPage() {
         const decoded = JSON.parse(decodeURIComponent(atob(token)))
         setUser({ email: decoded.email, user_metadata: { full_name: decoded.name } })
         setLoading(false)
+        // Fetch dashboard data after auth
+        fetchDashboardData()
       } catch (e) {
         router.push("/admin/login")
       }
@@ -128,7 +189,7 @@ export default function AdminDashboardPage() {
                 <CardContent>
                   <div className="flex items-center gap-2">
                     <Store className="h-5 w-5 text-blue-500" />
-                    <p className="text-3xl font-bold">0</p>
+                    <p className="text-3xl font-bold">{statsLoading ? "..." : pharmacyCount}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -140,7 +201,7 @@ export default function AdminDashboardPage() {
                 <CardContent>
                   <div className="flex items-center gap-2">
                     <Truck className="h-5 w-5 text-green-500" />
-                    <p className="text-3xl font-bold">0</p>
+                    <p className="text-3xl font-bold">{statsLoading ? "..." : agentCount}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -152,7 +213,7 @@ export default function AdminDashboardPage() {
                 <CardContent>
                   <div className="flex items-center gap-2">
                     <ShoppingCart className="h-5 w-5 text-purple-500" />
-                    <p className="text-3xl font-bold">0</p>
+                    <p className="text-3xl font-bold">{statsLoading ? "..." : orderCount}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -203,11 +264,59 @@ export default function AdminDashboardPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12">
-                  <Store className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No pharmacies registered yet</p>
-                  <p className="text-sm text-muted-foreground mt-1">Create an invite link to get started</p>
-                </div>
+                {pharmacies.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Store className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No pharmacies registered yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">Create an invite link to get started</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pharmacies.map((pharmacy) => (
+                      <div key={pharmacy.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+                            <Store className="h-6 w-6 text-blue-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-lg">{pharmacy.store_name}</p>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                              <span className="flex items-center gap-1">
+                                <Users className="h-3 w-3" />
+                                {pharmacy.owner_name}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {pharmacy.email}
+                              </span>
+                              {pharmacy.contact_phone && (
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {pharmacy.contact_phone}
+                                </span>
+                              )}
+                            </div>
+                            {(pharmacy.city || pharmacy.state) && (
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                                <MapPin className="h-3 w-3" />
+                                {[pharmacy.address, pharmacy.city, pharmacy.state].filter(Boolean).join(", ")}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          {pharmacy.license_number && (
+                            <Badge variant="outline">{pharmacy.license_number}</Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Joined {new Date(pharmacy.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -231,11 +340,47 @@ export default function AdminDashboardPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12">
-                  <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No delivery agents yet</p>
-                  <p className="text-sm text-muted-foreground mt-1">Create an invite link to get started</p>
-                </div>
+                {agents.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No delivery agents yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">Create an invite link to get started</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {agents.map((agent) => (
+                      <div key={agent.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center gap-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                            <Truck className="h-6 w-6 text-green-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-lg">{agent.name}</p>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                              <span className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {agent.email}
+                              </span>
+                              {agent.contact_phone && (
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {agent.contact_phone}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant="secondary">Agent</Badge>
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Joined {new Date(agent.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

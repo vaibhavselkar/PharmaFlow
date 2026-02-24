@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ShieldCheck, Store, Truck } from "lucide-react"
-import { signUpWithEmail, signInWithEmail } from "@/lib/supabase"
+import { signUpWithEmail, signInWithEmail, createPharmacy, createAgent } from "@/lib/supabase"
 
 export default function RegisterForm() {
   const router = useRouter()
@@ -64,7 +64,7 @@ export default function RegisterForm() {
     setLoading(true)
     try {
       // First, try to sign up
-      const { data, error } = await signUpWithEmail(formData.email, formData.password)
+      const { data: authData, error } = await signUpWithEmail(formData.email, formData.password)
       
       if (error) {
         // If user already exists, try to sign in
@@ -81,6 +81,36 @@ export default function RegisterForm() {
         }
         toast.error(error.message)
         return
+      }
+
+      // After successful signup, save the user details to the appropriate table
+      if (role === "pharmacy") {
+        const { error: pharmacyError } = await createPharmacy({
+          store_name: formData.storeName,
+          owner_name: formData.name,
+          contact_phone: formData.phone,
+          email: formData.email,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          license_number: formData.licenseNumber,
+        })
+        
+        if (pharmacyError) {
+          console.error("Error creating pharmacy:", pharmacyError)
+          toast.warning("Account created but failed to save pharmacy details")
+        }
+      } else if (role === "agent") {
+        const { error: agentError } = await createAgent({
+          name: formData.name,
+          contact_phone: formData.phone,
+          email: formData.email,
+        })
+        
+        if (agentError) {
+          console.error("Error creating agent:", agentError)
+          toast.warning("Account created but failed to save agent details")
+        }
       }
 
       toast.success("Registration successful! Please check your email to verify your account.")
