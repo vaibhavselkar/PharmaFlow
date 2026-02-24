@@ -8,6 +8,7 @@ import { OrderTable } from "@/components/dashboard/order-table"
 import { MedicineSearch } from "@/components/dashboard/medicine-search"
 import { Cart } from "@/components/dashboard/cart"
 import { CheckoutDialog } from "@/components/dashboard/checkout-dialog"
+import { EditOrderDialog } from "@/components/dashboard/edit-order-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Pill, ShoppingCart, Package, ClipboardList, IndianRupee } from "lucide-react"
@@ -32,6 +33,10 @@ export default function PharmacyDashboard() {
       // silently fail for polling
     }
   }, [])
+
+  const handleOrderUpdated = useCallback(() => {
+    fetchOrders()
+  }, [fetchOrders])
 
   useEffect(() => {
     async function fetchUser() {
@@ -145,7 +150,14 @@ export default function PharmacyDashboard() {
                 <CardTitle>Order History</CardTitle>
               </CardHeader>
               <CardContent>
-                <OrderTable orders={orders} />
+                <OrderTable 
+                  orders={orders} 
+                  renderActions={(order) => 
+                    order.status === "pending" ? (
+                      <EditOrderDialog order={order} onOrderUpdated={handleOrderUpdated} />
+                    ) : null
+                  }
+                />
               </CardContent>
             </Card>
           </TabsContent>
