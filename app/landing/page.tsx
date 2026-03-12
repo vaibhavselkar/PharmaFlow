@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -23,11 +23,44 @@ import {
   Calendar,
   MapPin,
   MessageSquare,
-  Award
+  Award,
+  LogIn,
+  LogOut,
+  LayoutDashboard
 } from 'lucide-react'
 
 export default function LandingPage() {
   const [isDemoLoading, setIsDemoLoading] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userRole, setUserRole] = useState<string | null>(null)
+
+  // Check authentication status on component mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me')
+        if (response.ok) {
+          const userData = await response.json()
+          setIsAuthenticated(true)
+          setUserRole(userData.role)
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error)
+      }
+    }
+    checkAuth()
+  }, [])
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      setIsAuthenticated(false)
+      setUserRole(null)
+      window.location.href = '/'
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
 
   const handleDemoClick = () => {
     setIsDemoLoading(true)
@@ -43,6 +76,19 @@ export default function LandingPage() {
 
   const handleRegisterClick = () => {
     window.location.href = '/register'
+  }
+
+  const getDashboardUrl = () => {
+    switch (userRole) {
+      case 'pharmacy':
+        return '/dashboard/pharmacy'
+      case 'distributor':
+        return '/dashboard/distributor'
+      case 'agent':
+        return '/dashboard/agent'
+      default:
+        return '/admin/dashboard'
+    }
   }
 
   return (
@@ -62,12 +108,28 @@ export default function LandingPage() {
               <a href="#contact" className="text-gray-600 hover:text-gray-900 transition-colors">Contact</a>
             </div>
             <div className="flex space-x-4">
-              <Button variant="outline" onClick={handleLoginClick}>
-                Login
-              </Button>
-              <Button onClick={handleRegisterClick}>
-                Register
-              </Button>
+              {isAuthenticated ? (
+                <>
+                  <Button variant="outline" onClick={() => window.location.href = getDashboardUrl()}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Button>
+                  <Button variant="outline" onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={handleLoginClick}>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Login
+                  </Button>
+                  <Button onClick={handleRegisterClick}>
+                    Register
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
