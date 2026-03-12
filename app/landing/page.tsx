@@ -37,6 +37,14 @@ export default function LandingPage() {
     }, 1000)
   }
 
+  const handleLoginClick = () => {
+    window.location.href = '/login'
+  }
+
+  const handleRegisterClick = () => {
+    window.location.href = '/register'
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Navigation */}
@@ -54,11 +62,11 @@ export default function LandingPage() {
               <a href="#contact" className="text-gray-600 hover:text-gray-900 transition-colors">Contact</a>
             </div>
             <div className="flex space-x-4">
-              <Button variant="outline" onClick={() => window.location.href = '/login'}>
-                Sign In
+              <Button variant="outline" onClick={handleLoginClick}>
+                Login
               </Button>
-              <Button onClick={() => window.location.href = '/register'}>
-                Get Started
+              <Button onClick={handleRegisterClick}>
+                Register
               </Button>
             </div>
           </div>
