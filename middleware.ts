@@ -68,6 +68,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Allow access to landing page for everyone
+  if (pathname === "/" || pathname === "/landing") {
+    return supabaseResponse
+  }
+
   return supabaseResponse
 }
 
