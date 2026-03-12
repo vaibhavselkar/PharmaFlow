@@ -185,35 +185,35 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="relative">
-              <div className="bg-white rounded-2xl shadow-2xl p-8">
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <Package className="h-8 w-8 text-blue-600 mb-2" />
+              <div className="bg-white rounded-2xl shadow-2xl p-6">
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  <div className="bg-blue-50 rounded-lg p-3">
+                    <Package className="h-6 w-6 text-blue-600 mb-2" />
                     <div className="text-sm font-semibold">1,234</div>
                     <div className="text-xs text-gray-600">Active Orders</div>
                   </div>
-                  <div className="bg-green-50 rounded-lg p-4">
-                    <Users className="h-8 w-8 text-green-600 mb-2" />
+                  <div className="bg-green-50 rounded-lg p-3">
+                    <Users className="h-6 w-6 text-green-600 mb-2" />
                     <div className="text-sm font-semibold">89</div>
                     <div className="text-xs text-gray-600">Delivery Agents</div>
                   </div>
-                  <div className="bg-purple-50 rounded-lg p-4">
-                    <Database className="h-8 w-8 text-purple-600 mb-2" />
+                  <div className="bg-purple-50 rounded-lg p-3">
+                    <Database className="h-6 w-6 text-purple-600 mb-2" />
                     <div className="text-sm font-semibold">15K+</div>
                     <div className="text-xs text-gray-600">Medicine SKUs</div>
                   </div>
-                  <div className="bg-orange-50 rounded-lg p-4">
-                    <Truck className="h-8 w-8 text-orange-600 mb-2" />
+                  <div className="bg-orange-50 rounded-lg p-3">
+                    <Truck className="h-6 w-6 text-orange-600 mb-2" />
                     <div className="text-sm font-semibold">98.7%</div>
                     <div className="text-xs text-gray-600">On-time Delivery</div>
                   </div>
                 </div>
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
-                  <h3 className="font-semibold mb-2">Live Dashboard Preview</h3>
-                  <p className="text-sm opacity-90 mb-4">
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 text-white">
+                  <h3 className="font-semibold mb-2 text-sm">Live Dashboard Preview</h3>
+                  <p className="text-xs opacity-90 mb-3">
                     See how our platform transforms your pharmacy operations with real-time insights and seamless workflows.
                   </p>
-                  <Button variant="secondary" size="sm" className="bg-white text-blue-600 hover:bg-gray-100">
+                  <Button variant="secondary" size="sm" className="bg-white text-blue-600 hover:bg-gray-100 text-xs">
                     View Dashboard
                   </Button>
                 </div>
@@ -238,7 +238,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Pharmacy Features */}
             <Card>
               <CardHeader>
