@@ -610,8 +610,8 @@ export default function LandingPage() {
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
-            © 2024 PharmaFlow. All rights reserved.
+              <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
+            © PharmaFlow. All rights reserved.
           </div>
         </div>
       </footer>
